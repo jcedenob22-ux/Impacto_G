@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impacto G — Simulador de Caída Libre</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<!-- AUTH SCREENS -->
+<div id="authScreen" class="auth-screen">
+  <canvas id="authStars"></canvas>
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg width="44" height="44" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" stroke="#22c55e" stroke-width="1.2"/><circle cx="14" cy="8" r="3" fill="#22c55e"/><line x1="14" y1="11" x2="14" y2="22" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="22" x2="18" y2="22" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span class="brand auth-brand">IMPACTO G</span>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="loginPanel">
+      <h2 class="auth-title">INICIAR SESIÓN</h2>
+      <p class="auth-sub">Accede a tu cuenta para continuar</p>
+      <div class="auth-fields">
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="tu@email.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Contraseña</label>
+          <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin()">
+        </div>
+      </div>
+      <p class="auth-error hidden" id="loginError"></p>
+      <button class="btn-primary auth-btn" id="loginBtn" onclick="doLogin()">Entrar →</button>
+      <p class="auth-switch">¿No tienes cuenta? <a onclick="showRegister()">Regístrate</a></p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerPanel" class="hidden">
+      <h2 class="auth-title">CREAR CUENTA</h2>
+      <p class="auth-sub">Únete a Impacto G</p>
+      <div class="auth-fields">
+        <div class="auth-field">
+          <label>Nombre de usuario</label>
+          <input type="text" id="regUsername" placeholder="Tu nombre..." maxlength="30">
+        </div>
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="regEmail" placeholder="tu@email.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Contraseña</label>
+          <input type="password" id="regPass" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter') doRegister()">
+        </div>
+      </div>
+      <p class="auth-error hidden" id="registerError"></p>
+      <button class="btn-primary auth-btn" id="registerBtn" onclick="doRegister()">Crear cuenta →</button>
+      <p class="auth-switch">¿Ya tienes cuenta? <a onclick="showLogin()">Inicia sesión</a></p>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal" id="modalStep1">
+    <div class="modal-glow"></div>
+    <div class="modal-logo"><svg width="52" height="52" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" stroke="#22c55e" stroke-width="1.2"/><circle cx="14" cy="8" r="3" fill="#22c55e"/><line x1="14" y1="11" x2="14" y2="22" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="22" x2="18" y2="22" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+    <h2 class="modal-title">IMPACTO <span class="brand">G</span></h2>
+    <p class="modal-subtitle">Simulador de Caída Libre</p>
+    <div class="modal-divider"></div>
+    <p class="modal-section-title">¿Qué es la Cinemática?</p>
+    <p class="modal-text">La <strong>cinemática</strong> estudia el movimiento sin considerar sus causas. La <strong>caída libre</strong> es su caso más puro: un objeto cae bajo la gravedad, acelerando constantemente. Con resistencia del aire, la aceleración neta disminuye según la velocidad.</p>
+    <div class="modal-formulas">
+      <div class="formula"><span class="formula-sym">v</span><span class="formula-eq">= g·t</span></div>
+      <div class="formula"><span class="formula-sym">h</span><span class="formula-eq">= h₀ − ½g·t²</span></div>
+      <div class="formula"><span class="formula-sym">a</span><span class="formula-eq">= g − k·v²/m</span></div>
+    </div>
+    <h3 class="modal-title" style="font-size:1rem;margin-bottom:6px">BIENVENIDO, <span class="brand" id="saludoNombre">—</span></h3>
+    <p class="modal-text" style="margin-bottom:20px">El universo te espera. Explora la caída libre en distintos planetas.</p>
+    <button class="btn-primary modal-btn" onclick="cerrarModal()">Iniciar simulación ▶</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app">
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" stroke="#22c55e" stroke-width="1.5"/><circle cx="14" cy="8" r="3" fill="#22c55e"/><line x1="14" y1="11" x2="14" y2="22" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/><line x1="10" y1="22" x2="18" y2="22" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span class="brand logo-text">IMPACTO G</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="user-chip" id="userChip"></span>
+        <button class="btn-theme" id="btnTheme" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+        <button class="btn-logout" onclick="doLogout()" title="Cerrar sesión">⏻</button>
+        <span class="badge">v4.0</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" id="tabSim" onclick="switchTab('sim')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5l10 5.5-10 5.5V2.5z"/></svg>
+        Simulación Libre
+      </button>
+      <button class="tab" id="tabChallenge" onclick="switchTab('challenge')">
+        🎯 Modo Desafío
+      </button>
+      <button class="tab" id="tabRanking" onclick="switchTab('ranking')">
+        🏆 Ranking
+      </button>
+    </div>
+
+    <!-- SIMULACION LIBRE -->
+    <div id="panelSim">
+
+      <!-- LEFT PANEL -->
+      <div class="col-left">
+
+        <!-- BOLA A -->
+        <div class="card ball-card ball-a">
+          <div class="ball-card-header">
+            <span class="ball-dot a"></span>
+            <p class="card-label" style="margin:0">Objeto A</p>
+          </div>
+          <p class="card-sublabel">Planeta</p>
+          <div class="planet-grid" id="planetGridA">
+            <button class="planet-btn active" data-g="9.8"  data-name="Tierra"  onclick="selectPlanet('A',this)"><span class="planet-icon">🌍</span><span>Tierra</span><span class="planet-g">9.8</span></button>
+            <button class="planet-btn"        data-g="1.62" data-name="Luna"    onclick="selectPlanet('A',this)"><span class="planet-icon">🌕</span><span>Luna</span><span class="planet-g">1.62</span></button>
+            <button class="planet-btn"        data-g="3.72" data-name="Marte"   onclick="selectPlanet('A',this)"><span class="planet-icon">🔴</span><span>Marte</span><span class="planet-g">3.72</span></button>
+            <button class="planet-btn"        data-g="24.8" data-name="Júpiter" onclick="selectPlanet('A',this)"><span class="planet-icon">🟠</span><span>Júpiter</span><span class="planet-g">24.8</span></button>
+          </div>
+          <p class="card-sublabel" style="margin-top:12px">Altura inicial</p>
+          <div class="slider-row">
+            <input type="range" id="alturaSliderA" min="10" max="500" value="100" oninput="syncAltura('A',this.value)">
+            <div class="number-input-wrap"><input type="number" id="alturaNumA" value="100" min="1" max="1000" oninput="syncAltura('A',this.value)"><span class="unit">m</span></div>
+          </div>
+        </div>
+
+        <!-- BOLA B -->
+        <div class="card ball-card ball-b">
+          <div class="ball-card-header">
+            <span class="ball-dot b"></span>
+            <p class="card-label" style="margin:0">Objeto B</p>
+            <label class="toggle-wrap"><input type="checkbox" id="enableB" checked onchange="toggleB()"><span class="toggle"></span><span class="toggle-lbl">Activo</span></label>
+          </div>
+          <p class="card-sublabel">Planeta</p>
+          <div class="planet-grid" id="planetGridB">
+            <button class="planet-btn"        data-g="9.8"  data-name="Tierra"  onclick="selectPlanet('B',this)"><span class="planet-icon">🌍</span><span>Tierra</span><span class="planet-g">9.8</span></button>
+            <button class="planet-btn"        data-g="1.62" data-name="Luna"    onclick="selectPlanet('B',this)"><span class="planet-icon">🌕</span><span>Luna</span><span class="planet-g">1.62</span></button>
+            <button class="planet-btn active" data-g="3.72" data-name="Marte"   onclick="selectPlanet('B',this)"><span class="planet-icon">🔴</span><span>Marte</span><span class="planet-g">3.72</span></button>
+            <button class="planet-btn"        data-g="24.8" data-name="Júpiter" onclick="selectPlanet('B',this)"><span class="planet-icon">🟠</span><span>Júpiter</span><span class="planet-g">24.8</span></button>
+          </div>
+          <p class="card-sublabel" style="margin-top:12px">Altura inicial</p>
+          <div class="slider-row">
+            <input type="range" id="alturaSliderB" min="10" max="500" value="100" oninput="syncAltura('B',this.value)">
+            <div class="number-input-wrap"><input type="number" id="alturaNumB" value="100" min="1" max="1000" oninput="syncAltura('B',this.value)"><span class="unit">m</span></div>
+          </div>
+        </div>
+
+        <!-- FÍSICA -->
+        <div class="card">
+          <p class="card-label">Parámetros físicos</p>
+
+          <p class="card-sublabel">Resistencia del aire (k)</p>
+          <div class="slider-row">
+            <input type="range" id="airSlider" min="0" max="0.5" step="0.01" value="0" oninput="syncAir(this.value)">
+            <div class="number-input-wrap"><input type="number" id="airNum" value="0" min="0" max="0.5" step="0.01" oninput="syncAir(this.value)"><span class="unit">k</span></div>
+          </div>
+          <p class="param-hint" id="airHint">Sin resistencia (vacío)</p>
+
+          <p class="card-sublabel" style="margin-top:14px">Velocidad de simulación</p>
+          <div class="slider-row">
+            <input type="range" id="speedSlider" min="0.25" max="3" step="0.25" value="1" oninput="syncSpeed(this.value)">
+            <div class="speed-badge" id="speedBadge">1×</div>
+          </div>
+        </div>
+
+        <!-- CONTROLES -->
+        <div class="btn-row">
+          <button class="btn-primary" id="btnSim" onclick="iniciarSimulacion()">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5l10 5.5-10 5.5V2.5z"/></svg>
+            Simular
+          </button>
+          <button class="btn-pause" id="btnPause" onclick="togglePausa()" disabled>
+            <svg id="pauseIcon" width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>
+          </button>
+          <button class="btn-secondary" onclick="resetear()">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 8a6 6 0 1 0 1.5-4"/><polyline points="2,4 2,8 6,8"/></svg>
+            Reset
+          </button>
+        </div>
+
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="col-right">
+
+        <!-- MÉTRICAS -->
+        <div class="metrics-dual">
+          <div class="metrics-col">
+            <p class="metrics-title a">▸ Objeto A</p>
+            <div class="metric"><span class="metric-icon">⏱</span><div><p class="metric-label">Tiempo</p><p class="metric-val mono" id="mTA">0.000 s</p></div></div>
+            <div class="metric"><span class="metric-icon">💨</span><div><p class="metric-label">Velocidad</p><p class="metric-val mono" id="mVA">0.00 m/s</p></div></div>
+            <div class="metric"><span class="metric-icon">📍</span><div><p class="metric-label">Altura</p><p class="metric-val mono" id="mHA">— m</p></div></div>
+          </div>
+          <div class="metrics-divider"></div>
+          <div class="metrics-col" id="metricsB">
+            <p class="metrics-title b">▸ Objeto B</p>
+            <div class="metric"><span class="metric-icon">⏱</span><div><p class="metric-label">Tiempo</p><p class="metric-val mono" id="mTB">0.000 s</p></div></div>
+            <div class="metric"><span class="metric-icon">💨</span><div><p class="metric-label">Velocidad</p><p class="metric-val mono" id="mVB">0.00 m/s</p></div></div>
+            <div class="metric"><span class="metric-icon">📍</span><div><p class="metric-label">Altura</p><p class="metric-val mono" id="mHB">— m</p></div></div>
+          </div>
+        </div>
+
+        <!-- ESCENARIO -->
+        <div class="card escenario-card">
+          <div class="escenario" id="escenario">
+            <canvas id="trailCanvas"></canvas>
+            <!-- Bola A -->
+            <div class="bola-wrap" id="bolaWrapA" style="left:35%">
+              <div class="bola bola-a" id="bolaA"></div>
+              <div class="bola-shadow" id="bolaShadowA"></div>
+            </div>
+            <!-- Bola B -->
+            <div class="bola-wrap" id="bolaWrapB" style="left:65%">
+              <div class="bola bola-b" id="bolaB"></div>
+              <div class="bola-shadow bola-shadow-b" id="bolaShadowB"></div>
+            </div>
+            <div class="suelo" id="suelo"></div>
+            <div class="label-a" id="labelA">A</div>
+            <div class="label-b" id="labelB">B</div>
+            <div class="pause-overlay" id="pauseOverlay">⏸ PAUSADO</div>
+          </div>
+        </div>
+
+        <!-- GRÁFICA -->
+        <div class="card grafica-card">
+          <div class="grafica-header">
+            <p class="card-label">Velocidad vs Tiempo</p>
+            <div style="display:flex;gap:12px;align-items:center">
+              <span class="legend-dot a"></span><span class="legend-lbl">A</span>
+              <span class="legend-dot b"></span><span class="legend-lbl">B</span>
+              <span class="grafica-hint" id="grafHint">—</span>
+            </div>
+          </div>
+          <canvas id="grafica"></canvas>
+        </div>
+
+      </div>
+    </div>
+
+    </div> <!-- end panelSim -->
+
+    <!-- MODO DESAFIO -->
+    <div id="panelChallenge" class="hidden">
+      <div class="challenge-layout">
+        <div class="challenge-left">
+          <!-- Misión activa -->
+          <div class="card mission-card" id="missionCard">
+            <div class="mission-header">
+              <span class="mission-badge" id="missionBadge">MISIÓN 1</span>
+              <span class="mission-diff" id="missionDiff">⭐ Fácil</span>
+            </div>
+            <p class="mission-title" id="missionTitle">Cargando misión...</p>
+            <p class="mission-desc" id="missionDesc"></p>
+            <div class="mission-target" id="missionTarget"></div>
+          </div>
+
+          <!-- Controles desafío -->
+          <div class="card">
+            <p class="card-label">Planeta</p>
+            <div class="planet-grid" id="planetGridC">
+              <button class="planet-btn active-a" data-g="9.8"  data-name="Tierra"  onclick="selectPlanetC(this)"><span class="planet-icon">🌍</span><span>Tierra</span><span class="planet-g">9.8</span></button>
+              <button class="planet-btn"          data-g="1.62" data-name="Luna"    onclick="selectPlanetC(this)"><span class="planet-icon">🌕</span><span>Luna</span><span class="planet-g">1.62</span></button>
+              <button class="planet-btn"          data-g="3.72" data-name="Marte"   onclick="selectPlanetC(this)"><span class="planet-icon">🔴</span><span>Marte</span><span class="planet-g">3.72</span></button>
+              <button class="planet-btn"          data-g="24.8" data-name="Júpiter" onclick="selectPlanetC(this)"><span class="planet-icon">🟠</span><span>Júpiter</span><span class="planet-g">24.8</span></button>
+            </div>
+            <p class="card-sublabel" style="margin-top:14px">Altura inicial</p>
+            <div class="slider-row">
+              <input type="range" id="alturaSliderC" min="10" max="1000" value="100" oninput="syncAlturaC(this.value)">
+              <div class="number-input-wrap"><input type="number" id="alturaNumC" value="100" min="1" max="1000" oninput="syncAlturaC(this.value)"><span class="unit">m</span></div>
+            </div>
+
+            <p class="card-sublabel" style="margin-top:14px">Resistencia del aire (k)</p>
+            <div class="slider-row">
+              <input type="range" id="airSliderC" min="0" max="0.5" step="0.01" value="0" oninput="syncAirC(this.value)">
+              <div class="number-input-wrap"><input type="number" id="airNumC" value="0" min="0" max="0.5" step="0.01" oninput="syncAirC(this.value)"><span class="unit">k</span></div>
+            </div>
+            <p class="param-hint" id="airHintC">Sin resistencia (vacío)</p>
+
+            <p class="card-sublabel" style="margin-top:14px">Velocidad de simulación</p>
+            <div class="slider-row">
+              <input type="range" id="speedSliderC" min="0.25" max="3" step="0.25" value="1" oninput="syncSpeedC(this.value)">
+              <div class="speed-badge" id="speedBadgeC">1×</div>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn-primary" id="btnSimC" onclick="iniciarDesafio()">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5l10 5.5-10 5.5V2.5z"/></svg>
+              Lanzar
+            </button>
+            <button class="btn-secondary" onclick="resetearDesafio()">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 8a6 6 0 1 0 1.5-4"/><polyline points="2,4 2,8 6,8"/></svg>
+              Reset
+            </button>
+            <button class="btn-skip" onclick="siguienteMision()">⏭ Saltar</button>
+          </div>
+
+          <!-- Métricas desafío -->
+          <div class="metrics" style="grid-template-columns:1fr 1fr">
+            <div class="metric"><span class="metric-icon">⏱</span><div><p class="metric-label">Tiempo</p><p class="metric-val mono" id="mTC">0.000 s</p></div></div>
+            <div class="metric"><span class="metric-icon">💨</span><div><p class="metric-label">Velocidad</p><p class="metric-val mono" id="mVC">0.00 m/s</p></div></div>
+          </div>
+
+          <!-- Perfil del jugador -->
+          <div class="card player-card">
+            <p class="card-label">Tu perfil</p>
+            <div class="player-info">
+              <div class="player-avatar" id="playerAvatar">?</div>
+              <div>
+                <p class="player-name" id="playerName">—</p>
+                <p class="player-level" id="playerLevel">Cadete Espacial</p>
+              </div>
+              <div class="player-pts">
+                <p class="player-pts-val" id="playerPts">0</p>
+                <p class="player-pts-lbl">pts</p>
+              </div>
+            </div>
+            <div class="xp-bar-wrap">
+              <div class="xp-bar" id="xpBar" style="width:0%"></div>
+            </div>
+            <p class="xp-label" id="xpLabel">0 / 500 pts para siguiente nivel</p>
+          </div>
+        </div>
+
+        <div class="challenge-right">
+          <!-- Escenario desafío -->
+          <div class="card escenario-card">
+            <div class="escenario" id="escenarioC">
+              <canvas id="trailCanvasC"></canvas>
+              <div class="bola-wrap" id="bolaWrapC" style="left:50%">
+                <div class="bola bola-a" id="bolaC"></div>
+                <div class="bola-shadow" id="bolaShadowC"></div>
+              </div>
+              <div class="suelo" id="sueloC"></div>
+              <!-- Target line -->
+              <div class="target-line hidden" id="targetLine">
+                <span class="target-line-label" id="targetLineLabel"></span>
+              </div>
+              <div class="pause-overlay" id="pauseOverlayC">⏸ PAUSADO</div>
+            </div>
+          </div>
+
+          <!-- Resultado misión -->
+          <div class="card result-card hidden" id="resultCard">
+            <div class="result-stars" id="resultStars"></div>
+            <p class="result-title" id="resultTitle"></p>
+            <p class="result-score" id="resultScore"></p>
+            <div class="result-details" id="resultDetails"></div>
+            <button class="btn-primary" style="width:100%;justify-content:center;margin-top:16px" onclick="siguienteMision()">Siguiente misión →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RANKING -->
+    <div id="panelRanking" class="hidden">
+      <div class="ranking-layout">
+        <div class="card ranking-card">
+          <div class="ranking-header-row">
+            <p class="card-label" style="margin:0">🏆 Ranking Global</p>
+            <button class="btn-export" onclick="cargarRanking()">↻ Actualizar</button>
+          </div>
+          <div id="rankingList" class="ranking-list">
+            <p style="text-align:center;color:var(--muted);font-family:var(--fm);padding:24px">Cargando...</p>
+          </div>
+        </div>
+        <div class="card my-stats-card">
+          <p class="card-label">Tus estadísticas</p>
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-item"><p class="stat-val" id="statPts">—</p><p class="stat-lbl">Puntos totales</p></div>
+            <div class="stat-item"><p class="stat-val" id="statMisiones">—</p><p class="stat-lbl">Misiones completadas</p></div>
+            <div class="stat-item"><p class="stat-val" id="statEstrellas">—</p><p class="stat-lbl">Estrellas obtenidas</p></div>
+            <div class="stat-item"><p class="stat-val" id="statNivel">—</p><p class="stat-lbl">Nivel actual</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado overlay (partículas) -->
+    <canvas class="particles-canvas hidden" id="particlesCanvas"></canvas>
+
+    <!-- Historial -->
+    <div class="card historial-card" id="historialSection">
+      <div class="historial-header">
+        <p class="card-label" style="margin:0">Historial de simulaciones</p>
+        <div style="display:flex;gap:8px">
+          <button class="btn-export" onclick="exportarCSV()">⬇ CSV</button>
+          <button class="btn-clear" onclick="limpiarHistorial()">🗑 Limpiar</button>
+        </div>
+      </div>
+      <div class="historial-wrap">
+        <table class="historial-table">
+          <thead><tr><th>#</th><th>Usuario</th><th>Objeto</th><th>Planeta</th><th>Altura</th><th>k aire</th><th>Tiempo</th><th>V. final</th><th>Fecha</th></tr></thead>
+          <tbody id="historialBody"><tr class="empty-row"><td colspan="9">// sin registros</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Confirm delete modal -->
+    <div class="confirm-overlay hidden" id="confirmOverlay">
+      <div class="confirm-box">
+        <div class="confirm-icon">🗑</div>
+        <p class="confirm-title">¿Eliminar historial?</p>
+        <p class="confirm-desc">Esta acción borrará todos los registros guardados. No se puede deshacer.</p>
+        <div class="confirm-btns">
+          <button class="btn-secondary confirm-cancel" onclick="cerrarConfirm()">Cancelar</button>
+          <button class="btn-danger" onclick="confirmarEliminar()">Sí, eliminar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
