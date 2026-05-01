@@ -1082,10 +1082,17 @@ async function cargarRanking() {
     );
     const data = await res.json();
 
-    // Stats
+    if (!data.length) {
+      list.innerHTML = `<p style="text-align:center;color:var(--muted);font-family:var(--fm);padding:24px">Sin usuarios aún</p>`;
+      return;
+    }
+
+    // Stats for current user
     const myEntry = data.find(d => d.username === userName);
     if (myEntry) {
-      document.getElementById("statPts").textContent = myEntry.puntos?.toLocaleString() || "0";
+      document.getElementById("statPts").textContent = (myEntry.puntos || 0).toLocaleString();
+      const lv = getLevel(myEntry.puntos || 0);
+      document.getElementById("statNivel").textContent = lv.name.split(" ")[0];
     }
 
     // Count missions & stars for current user
@@ -1099,11 +1106,10 @@ async function cargarRanking() {
       document.getElementById("statEstrellas").textContent = pData.reduce((s, r) => s + (r.estrellas || 0), 0);
     } catch {}
 
-    if (!data.length) { list.innerHTML = `<p style="text-align:center;color:var(--muted);font-family:var(--fm);padding:24px">Sin datos aún</p>`; return; }
-
-    const medals = ["gold","silver","bronze"];
+    const medals = ["gold", "silver", "bronze"];
     list.innerHTML = data.map((u, i) => {
-      const lv  = getLevel(u.puntos || 0);
+      const pts  = u.puntos || 0;
+      const lv   = getLevel(pts);
       const isMe = u.username === userName;
       return `<div class="ranking-item ${isMe ? "me" : ""}">
         <span class="ranking-pos ${medals[i] || ""}">${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "#" + (i+1)}</span>
@@ -1112,10 +1118,11 @@ async function cargarRanking() {
           <p class="ranking-name">${u.username}${isMe ? " (tú)" : ""}</p>
           <p class="ranking-level">${lv.name}</p>
         </div>
-        <span class="ranking-pts">${(u.puntos || 0).toLocaleString()} pts</span>
+        <span class="ranking-pts">${pts.toLocaleString()} pts</span>
       </div>`;
     }).join("");
   } catch (e) {
+    console.error("Ranking error:", e);
     list.innerHTML = `<p style="text-align:center;color:var(--danger);font-family:var(--fm);padding:24px">⚠ Error al cargar</p>`;
   }
 }
