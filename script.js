@@ -179,8 +179,25 @@ function hideAuthScreen() {
     const ctx = c.getContext("2d");
     let stars = [];
     const resize = () => { c.width = innerWidth; c.height = innerHeight; };
-    const make   = () => stars = Array.from({length:180}, () => ({ x: Math.random()*c.width, y: Math.random()*c.height, r: Math.random()*1.2+0.2, a: Math.random(), s: Math.random()*0.004+0.001 }));
-    const draw   = () => { ctx.clearRect(0,0,c.width,c.height); stars.forEach(s => { s.a+=s.s; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fillStyle=`rgba(148,163,184,${0.2+0.5*Math.abs(Math.sin(s.a))})`; ctx.fill(); }); requestAnimationFrame(draw); };
+    const make   = () => stars = Array.from({length:280}, () => ({
+      x: Math.random()*c.width, y: Math.random()*c.height,
+      r: Math.random()*1.4+0.1,
+      a: Math.random(),
+      s: Math.random()*0.003+0.0005,
+      color: Math.random() > 0.95 ? `rgba(${Math.floor(100+Math.random()*155)},${Math.floor(150+Math.random()*105)},255,` : `rgba(200,220,255,`
+    }));
+    const draw   = () => {
+      ctx.clearRect(0,0,c.width,c.height);
+      stars.forEach(s => {
+        s.a+=s.s;
+        const alpha = 0.15 + 0.7 * Math.abs(Math.sin(s.a));
+        ctx.beginPath();
+        ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle = s.color + alpha + ')';
+        ctx.fill();
+      });
+      requestAnimationFrame(draw);
+    };
     resize(); make(); addEventListener("resize", () => { resize(); make(); }); requestAnimationFrame(draw);
   }
   initStars("stars");
