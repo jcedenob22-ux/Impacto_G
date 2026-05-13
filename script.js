@@ -845,6 +845,8 @@ async function exportarPDF() {
   doc.save(`impactog_historial_${new Date().toISOString().slice(0,10)}.pdf`);
   showToast("✅ PDF exportado");
 }
+
+async function exportarCSV() {
   const tbody = document.getElementById("historialBody");
   let hist = [];
   try {
