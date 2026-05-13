@@ -740,7 +740,111 @@ async function confirmarEliminar() {
   }
 }
 
-async function exportarCSV() {
+async function exportarPDF() {
+  let hist = [];
+  try { hist = await sbSelect(); } catch { showToast("⚠ Error al obtener datos"); return; }
+  if (!hist.length) { showToast("⚠ No hay datos para exportar"); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+
+  // ── Fondo oscuro ──
+  doc.setFillColor(0, 0, 5);
+  doc.rect(0, 0, W, doc.internal.pageSize.getHeight(), "F");
+
+  // ── Logo SVG dibujado con primitivas ──
+  const lx = 14, ly = 10, lr = 7;
+  doc.setDrawColor(0, 212, 255); doc.setLineWidth(0.4);
+  doc.circle(lx, ly + lr, lr);
+  doc.setFillColor(0, 212, 255);
+  doc.circle(lx, ly + 4, 1.5, "F");
+  doc.line(lx, ly + 5.5, lx, ly + lr * 1.6);
+  doc.line(lx - 2.5, ly + lr * 1.6, lx + 2.5, ly + lr * 1.6);
+
+  // ── Título ──
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(0, 212, 255);
+  doc.text("IMPACTO G", 26, 16);
+
+  doc.setFontSize(9);
+  doc.setTextColor(90, 138, 176);
+  doc.text("Simulador de Caída Libre — Historial de Simulaciones", 26, 22);
+
+  // ── Línea separadora ──
+  doc.setDrawColor(13, 31, 60);
+  doc.setLineWidth(0.3);
+  doc.line(14, 27, W - 14, 27);
+
+  // ── Fecha y usuario ──
+  doc.setFontSize(8);
+  doc.setTextColor(90, 138, 176);
+  doc.text(`Usuario: ${userName}`, 14, 33);
+  doc.text(`Generado: ${new Date().toLocaleString("es")}`, W - 14, 33, { align: "right" });
+
+  // ── Tabla ──
+  const headers = ["#", "Usuario", "Objeto", "Planeta", "Altura (m)", "k aire", "Tiempo", "V. final (m/s)", "Fecha"];
+  const rows = hist.map(e => [
+    String(e.id), e.usuario, e.objeto, e.planeta,
+    String(e.altura), String(e.k_aire), e.tiempo,
+    String(e.v_final),
+    new Date(e.fecha).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })
+  ]);
+
+  const colW = [10, 28, 16, 22, 22, 16, 22, 28, 36];
+  const startY = 38;
+  let y = startY;
+  const rowH = 7;
+
+  // Header row
+  doc.setFillColor(5, 10, 24);
+  doc.rect(14, y, W - 28, rowH, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(0, 212, 255);
+  let x = 14;
+  headers.forEach((h, i) => {
+    doc.text(h, x + 2, y + 4.8);
+    x += colW[i];
+  });
+  y += rowH;
+
+  // Data rows
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  rows.forEach((row, ri) => {
+    if (y > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage();
+      doc.setFillColor(0, 0, 5);
+      doc.rect(0, 0, W, doc.internal.pageSize.getHeight(), "F");
+      y = 15;
+    }
+    doc.setFillColor(ri % 2 === 0 ? 5 : 8, ri % 2 === 0 ? 10 : 15, ri % 2 === 0 ? 24 : 34);
+    doc.rect(14, y, W - 28, rowH, "F");
+    doc.setTextColor(ri % 2 === 0 ? 180 : 200, 210, 230);
+    x = 14;
+    row.forEach((cell, i) => {
+      doc.text(String(cell), x + 2, y + 4.8);
+      x += colW[i];
+    });
+    // Objeto color
+    doc.setTextColor(row[2] === "A" ? 0 : 245, row[2] === "A" ? 212 : 158, row[2] === "A" ? 255 : 11);
+    doc.text(row[2], 14 + colW[0] + 2, y + 4.8);
+    doc.setTextColor(180, 210, 230);
+    y += rowH;
+  });
+
+  // ── Footer ──
+  doc.setDrawColor(13, 31, 60);
+  doc.line(14, y + 4, W - 14, y + 4);
+  doc.setFontSize(7);
+  doc.setTextColor(42, 74, 106);
+  doc.text("Impacto G — Simulador de Física Universitaria", W / 2, y + 9, { align: "center" });
+
+  doc.save(`impactog_historial_${new Date().toISOString().slice(0,10)}.pdf`);
+  showToast("✅ PDF exportado");
+}
   const tbody = document.getElementById("historialBody");
   let hist = [];
   try {

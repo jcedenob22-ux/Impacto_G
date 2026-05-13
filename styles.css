@@ -18,6 +18,7 @@
   --col-b: #f59e0b;
   --radius: 10px;
   --fd: 'Orbitron', sans-serif;
+  --fe: 'Exo 2', sans-serif;
   --fm: 'Share Tech Mono', monospace;
   --fb: 'Inter', sans-serif;
 }
@@ -41,7 +42,18 @@ body::before {
 header { margin-bottom: 20px; }
 .header-inner { display: flex; align-items: center; justify-content: space-between; }
 .logo { display: flex; align-items: center; gap: 9px; }
-.logo-text { font-family: var(--fd); font-size: 1rem; font-weight: 900; letter-spacing: 3px; }
+.logo-text {
+  font-family: var(--fe);
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #00d4ff, #7c3aed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 8px #00d4ff60);
+}
 .brand { color: var(--accent); font-family: var(--fd); font-weight: 900; }
 .badge { font-family: var(--fm); font-size: 0.68rem; background: #22c55e10; color: var(--accent); border: 1px solid #22c55e30; padding: 3px 10px; border-radius: 2px; letter-spacing: 1px; }
 .user-chip { font-family: var(--fm); font-size: 0.72rem; color: var(--muted2); background: var(--surface2); border: 1px solid var(--border); padding: 3px 10px; border-radius: 2px; }
@@ -231,7 +243,9 @@ input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 18px #00d4ffcc; 
   font-family: var(--fm);
   transition: all 0.2s;
 }
-.btn-export:hover { border-color: var(--accent); background: #22c55e10; }
+.btn-export:hover { border-color: var(--accent); background: #00d4ff10; }
+.btn-export-pdf { color: var(--purple); border-color: #7c3aed40; }
+.btn-export-pdf:hover { border-color: var(--purple); background: #7c3aed10; }
 
 /* ===== LIGHT THEME ===== */
 body.light {
@@ -421,8 +435,8 @@ body.light .confirm-overlay { background: rgba(200,220,240,0.75); }
 }
 .tab {
   flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 10px 14px; border: none; border-radius: 7px;
-  font-family: var(--fd); font-size: 0.62rem; font-weight: 700; letter-spacing: 1.5px;
+  padding: 11px 14px; border: none; border-radius: 7px;
+  font-family: var(--fe); font-size: 0.78rem; font-weight: 700; letter-spacing: 1px;
   cursor: pointer; transition: all 0.2s;
   background: transparent; color: var(--muted2);
 }
