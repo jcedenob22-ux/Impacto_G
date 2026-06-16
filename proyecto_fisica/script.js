@@ -179,8 +179,25 @@ function hideAuthScreen() {
     const ctx = c.getContext("2d");
     let stars = [];
     const resize = () => { c.width = innerWidth; c.height = innerHeight; };
-    const make   = () => stars = Array.from({length:180}, () => ({ x: Math.random()*c.width, y: Math.random()*c.height, r: Math.random()*1.2+0.2, a: Math.random(), s: Math.random()*0.004+0.001 }));
-    const draw   = () => { ctx.clearRect(0,0,c.width,c.height); stars.forEach(s => { s.a+=s.s; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fillStyle=`rgba(148,163,184,${0.2+0.5*Math.abs(Math.sin(s.a))})`; ctx.fill(); }); requestAnimationFrame(draw); };
+    const make   = () => stars = Array.from({length:280}, () => ({
+      x: Math.random()*c.width, y: Math.random()*c.height,
+      r: Math.random()*1.4+0.1,
+      a: Math.random(),
+      s: Math.random()*0.003+0.0005,
+      color: Math.random() > 0.95 ? `rgba(${Math.floor(100+Math.random()*155)},${Math.floor(150+Math.random()*105)},255,` : `rgba(200,220,255,`
+    }));
+    const draw   = () => {
+      ctx.clearRect(0,0,c.width,c.height);
+      stars.forEach(s => {
+        s.a+=s.s;
+        const alpha = 0.15 + 0.7 * Math.abs(Math.sin(s.a));
+        ctx.beginPath();
+        ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle = s.color + alpha + ')';
+        ctx.fill();
+      });
+      requestAnimationFrame(draw);
+    };
     resize(); make(); addEventListener("resize", () => { resize(); make(); }); requestAnimationFrame(draw);
   }
   initStars("stars");
@@ -723,6 +740,112 @@ async function confirmarEliminar() {
   }
 }
 
+async function exportarPDF() {
+  let hist = [];
+  try { hist = await sbSelect(); } catch { showToast("⚠ Error al obtener datos"); return; }
+  if (!hist.length) { showToast("⚠ No hay datos para exportar"); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+
+  // ── Fondo oscuro ──
+  doc.setFillColor(0, 0, 5);
+  doc.rect(0, 0, W, doc.internal.pageSize.getHeight(), "F");
+
+  // ── Logo SVG dibujado con primitivas ──
+  const lx = 14, ly = 10, lr = 7;
+  doc.setDrawColor(0, 212, 255); doc.setLineWidth(0.4);
+  doc.circle(lx, ly + lr, lr);
+  doc.setFillColor(0, 212, 255);
+  doc.circle(lx, ly + 4, 1.5, "F");
+  doc.line(lx, ly + 5.5, lx, ly + lr * 1.6);
+  doc.line(lx - 2.5, ly + lr * 1.6, lx + 2.5, ly + lr * 1.6);
+
+  // ── Título ──
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(22);
+  doc.setTextColor(0, 212, 255);
+  doc.text("IMPACTO G", 26, 16);
+
+  doc.setFontSize(9);
+  doc.setTextColor(90, 138, 176);
+  doc.text("Simulador de Caída Libre — Historial de Simulaciones", 26, 22);
+
+  // ── Línea separadora ──
+  doc.setDrawColor(13, 31, 60);
+  doc.setLineWidth(0.3);
+  doc.line(14, 27, W - 14, 27);
+
+  // ── Fecha y usuario ──
+  doc.setFontSize(8);
+  doc.setTextColor(90, 138, 176);
+  doc.text(`Usuario: ${userName}`, 14, 33);
+  doc.text(`Generado: ${new Date().toLocaleString("es")}`, W - 14, 33, { align: "right" });
+
+  // ── Tabla ──
+  const headers = ["#", "Usuario", "Objeto", "Planeta", "Altura (m)", "k aire", "Tiempo", "V. final (m/s)", "Fecha"];
+  const rows = hist.map(e => [
+    String(e.id), e.usuario, e.objeto, e.planeta,
+    String(e.altura), String(e.k_aire), e.tiempo,
+    String(e.v_final),
+    new Date(e.fecha).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })
+  ]);
+
+  const colW = [10, 28, 16, 22, 22, 16, 22, 28, 36];
+  const startY = 38;
+  let y = startY;
+  const rowH = 7;
+
+  // Header row
+  doc.setFillColor(5, 10, 24);
+  doc.rect(14, y, W - 28, rowH, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(0, 212, 255);
+  let x = 14;
+  headers.forEach((h, i) => {
+    doc.text(h, x + 2, y + 4.8);
+    x += colW[i];
+  });
+  y += rowH;
+
+  // Data rows
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  rows.forEach((row, ri) => {
+    if (y > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage();
+      doc.setFillColor(0, 0, 5);
+      doc.rect(0, 0, W, doc.internal.pageSize.getHeight(), "F");
+      y = 15;
+    }
+    doc.setFillColor(ri % 2 === 0 ? 5 : 8, ri % 2 === 0 ? 10 : 15, ri % 2 === 0 ? 24 : 34);
+    doc.rect(14, y, W - 28, rowH, "F");
+    doc.setTextColor(ri % 2 === 0 ? 180 : 200, 210, 230);
+    x = 14;
+    row.forEach((cell, i) => {
+      doc.text(String(cell), x + 2, y + 4.8);
+      x += colW[i];
+    });
+    // Objeto color
+    doc.setTextColor(row[2] === "A" ? 0 : 245, row[2] === "A" ? 212 : 158, row[2] === "A" ? 255 : 11);
+    doc.text(row[2], 14 + colW[0] + 2, y + 4.8);
+    doc.setTextColor(180, 210, 230);
+    y += rowH;
+  });
+
+  // ── Footer ──
+  doc.setDrawColor(13, 31, 60);
+  doc.line(14, y + 4, W - 14, y + 4);
+  doc.setFontSize(7);
+  doc.setTextColor(42, 74, 106);
+  doc.text("Impacto G — Simulador de Física Universitaria", W / 2, y + 9, { align: "center" });
+
+  doc.save(`impactog_historial_${new Date().toISOString().slice(0,10)}.pdf`);
+  showToast("✅ PDF exportado");
+}
+
 async function exportarCSV() {
   const tbody = document.getElementById("historialBody");
   let hist = [];
@@ -1082,10 +1205,17 @@ async function cargarRanking() {
     );
     const data = await res.json();
 
-    // Stats
+    if (!data.length) {
+      list.innerHTML = `<p style="text-align:center;color:var(--muted);font-family:var(--fm);padding:24px">Sin usuarios aún</p>`;
+      return;
+    }
+
+    // Stats for current user
     const myEntry = data.find(d => d.username === userName);
     if (myEntry) {
-      document.getElementById("statPts").textContent = myEntry.puntos?.toLocaleString() || "0";
+      document.getElementById("statPts").textContent = (myEntry.puntos || 0).toLocaleString();
+      const lv = getLevel(myEntry.puntos || 0);
+      document.getElementById("statNivel").textContent = lv.name.split(" ")[0];
     }
 
     // Count missions & stars for current user
@@ -1099,11 +1229,10 @@ async function cargarRanking() {
       document.getElementById("statEstrellas").textContent = pData.reduce((s, r) => s + (r.estrellas || 0), 0);
     } catch {}
 
-    if (!data.length) { list.innerHTML = `<p style="text-align:center;color:var(--muted);font-family:var(--fm);padding:24px">Sin datos aún</p>`; return; }
-
-    const medals = ["gold","silver","bronze"];
+    const medals = ["gold", "silver", "bronze"];
     list.innerHTML = data.map((u, i) => {
-      const lv  = getLevel(u.puntos || 0);
+      const pts  = u.puntos || 0;
+      const lv   = getLevel(pts);
       const isMe = u.username === userName;
       return `<div class="ranking-item ${isMe ? "me" : ""}">
         <span class="ranking-pos ${medals[i] || ""}">${i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "#" + (i+1)}</span>
@@ -1112,10 +1241,11 @@ async function cargarRanking() {
           <p class="ranking-name">${u.username}${isMe ? " (tú)" : ""}</p>
           <p class="ranking-level">${lv.name}</p>
         </div>
-        <span class="ranking-pts">${(u.puntos || 0).toLocaleString()} pts</span>
+        <span class="ranking-pts">${pts.toLocaleString()} pts</span>
       </div>`;
     }).join("");
   } catch (e) {
+    console.error("Ranking error:", e);
     list.innerHTML = `<p style="text-align:center;color:var(--danger);font-family:var(--fm);padding:24px">⚠ Error al cargar</p>`;
   }
 }
