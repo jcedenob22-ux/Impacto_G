@@ -1,14 +1,11 @@
 // =============================================
 //  SUPABASE CONFIG
 // =============================================
-const SB_URL = "https://kjwodhmftuuljplaopgq.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtqd29kaG1mdHV1bGpwbGFvcGdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMDQyMzUsImV4cCI6MjA5Mjc4MDIzNX0.dEw29JyafRZCeUPH-uWOJELzapMh-3gfth6R53E8S78";
+const API_BASE = "/api";
 
-const sbHeaders = (token) => ({
+const apiHeaders = (token) => ({
   "Content-Type":  "application/json",
-  "apikey":        SB_KEY,
-  "Authorization": "Bearer " + (token || SB_KEY),
-  "Prefer":        "return=representation"
+  "Authorization": "Bearer " + token
 });
 
 // =============================================
@@ -32,13 +29,13 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = "Entrando...";
 
   try {
-    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    const res = await fetch(`${API_BASE}/auth/v1/token?grant_type=password`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SB_KEY },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password: pass })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error_description || data.msg || "Error al iniciar sesión");
+    if (!res.ok) throw new Error(data.msg || "Error al iniciar sesión");
     await onAuthSuccess(data);
   } catch (e) {
     showAuthError(errEl, e.message);
@@ -61,19 +58,18 @@ async function doRegister() {
 
   try {
     // 1. Sign up
-    const res = await fetch(`${SB_URL}/auth/v1/signup`, {
+    const res = await fetch(`${API_BASE}/auth/v1/signup`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SB_KEY },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password: pass })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error_description || data.msg || "Error al registrarse");
-    if (!data.access_token) throw new Error("Revisa tu email para confirmar la cuenta");
+    if (!res.ok) throw new Error(data.msg || "Error al registrarse");
 
     // 2. Create profile
-    await fetch(`${SB_URL}/rest/v1/profiles`, {
+    await fetch(`${API_BASE}/rest/v1/profiles`, {
       method: "POST",
-      headers: sbHeaders(data.access_token),
+      headers: apiHeaders(data.access_token),
       body: JSON.stringify({ id: data.user.id, username })
     });
 
@@ -86,9 +82,9 @@ async function doRegister() {
 }
 
 async function doLogout() {
-  await fetch(`${SB_URL}/auth/v1/logout`, {
+  await fetch(`${API_BASE}/auth/v1/logout`, {
     method: "POST",
-    headers: { "apikey": SB_KEY, "Authorization": "Bearer " + currentToken }
+    headers: apiHeaders(currentToken)
   });
   currentUser = null; currentToken = null; userName = "Usuario";
   localStorage.removeItem("impactog_session");
@@ -109,8 +105,8 @@ async function onAuthSuccess(data) {
   // Load profile username
   try {
     const pRes = await fetch(
-      `${SB_URL}/rest/v1/profiles?id=eq.${currentUser.id}&select=username`,
-      { headers: sbHeaders(currentToken) }
+      `${API_BASE}/rest/v1/profiles?id=eq.${currentUser.id}&select=username`,
+      { headers: apiHeaders(currentToken) }
     );
     const profiles = await pRes.json();
     if (profiles.length) userName = profiles[0].username;
@@ -127,9 +123,9 @@ async function tryRestoreSession() {
   try {
     const session = JSON.parse(saved);
     // Try to refresh token
-    const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    const res = await fetch(`${API_BASE}/auth/v1/token?grant_type=refresh_token`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SB_KEY },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: session.refresh_token })
     });
     if (!res.ok) { localStorage.removeItem("impactog_session"); return false; }
@@ -644,9 +640,9 @@ function resetearEstado(full) {
 //  SUPABASE DB
 // =============================================
 async function sbInsert(row) {
-  const res = await fetch(`${SB_URL}/rest/v1/simulaciones`, {
+  const res = await fetch(`${API_BASE}/rest/v1/simulaciones`, {
     method:  "POST",
-    headers: sbHeaders(currentToken),
+    headers: apiHeaders(currentToken),
     body:    JSON.stringify(row)
   });
   if (!res.ok) throw new Error(await res.text());
@@ -655,17 +651,17 @@ async function sbInsert(row) {
 
 async function sbSelect() {
   const res = await fetch(
-    `${SB_URL}/rest/v1/simulaciones?user_id=eq.${currentUser.id}&order=id.desc&limit=60`,
-    { headers: sbHeaders(currentToken) }
+    `${API_BASE}/rest/v1/simulaciones?user_id=eq.${currentUser.id}&order=id.desc&limit=60`,
+    { headers: apiHeaders(currentToken) }
   );
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 async function sbDeleteAll() {
-  const res = await fetch(`${SB_URL}/rest/v1/simulaciones?user_id=eq.${currentUser.id}`, {
+  const res = await fetch(`${API_BASE}/rest/v1/simulaciones?user_id=eq.${currentUser.id}`, {
     method:  "DELETE",
-    headers: sbHeaders(currentToken)
+    headers: apiHeaders(currentToken)
   });
   if (!res.ok) throw new Error(await res.text());
 }
@@ -1139,16 +1135,16 @@ function evaluarMision(tiempo, velocidad) {
 async function guardarPuntos(misionId, puntaje, estrellas) {
   if (!currentUser) return;
   try {
-    await fetch(`${SB_URL}/rest/v1/puntos`, {
+    await fetch(`${API_BASE}/rest/v1/puntos`, {
       method: "POST",
-      headers: sbHeaders(currentToken),
+      headers: apiHeaders(currentToken),
       body: JSON.stringify({ user_id: currentUser.id, mision_id: misionId, puntaje, estrellas })
     });
     // Update profile total
     const newTotal = userPuntos + puntaje;
-    await fetch(`${SB_URL}/rest/v1/profiles?id=eq.${currentUser.id}`, {
+    await fetch(`${API_BASE}/rest/v1/profiles?id=eq.${currentUser.id}`, {
       method: "PATCH",
-      headers: sbHeaders(currentToken),
+      headers: apiHeaders(currentToken),
       body: JSON.stringify({ puntos: newTotal })
     });
     userPuntos = newTotal;
@@ -1161,8 +1157,8 @@ async function cargarPerfil() {
   if (!currentUser) return;
   try {
     const res = await fetch(
-      `${SB_URL}/rest/v1/profiles?id=eq.${currentUser.id}&select=username,puntos`,
-      { headers: sbHeaders(currentToken) }
+      `${API_BASE}/rest/v1/profiles?id=eq.${currentUser.id}&select=username,puntos`,
+      { headers: apiHeaders(currentToken) }
     );
     const data = await res.json();
     if (data.length) {
@@ -1200,8 +1196,8 @@ async function cargarRanking() {
   list.innerHTML = `<p style="text-align:center;color:var(--muted);font-family:var(--fm);padding:24px">Cargando...</p>`;
   try {
     const res = await fetch(
-      `${SB_URL}/rest/v1/profiles?select=username,puntos&order=puntos.desc&limit=20`,
-      { headers: sbHeaders(currentToken) }
+      `${API_BASE}/rest/v1/profiles?select=username,puntos&order=puntos.desc&limit=20`,
+      { headers: apiHeaders(currentToken) }
     );
     const data = await res.json();
 
@@ -1221,8 +1217,8 @@ async function cargarRanking() {
     // Count missions & stars for current user
     try {
       const pRes = await fetch(
-        `${SB_URL}/rest/v1/puntos?user_id=eq.${currentUser.id}&select=puntaje,estrellas`,
-        { headers: sbHeaders(currentToken) }
+        `${API_BASE}/rest/v1/puntos?user_id=eq.${currentUser.id}&select=puntaje,estrellas`,
+        { headers: apiHeaders(currentToken) }
       );
       const pData = await pRes.json();
       document.getElementById("statMisiones").textContent = pData.length;
