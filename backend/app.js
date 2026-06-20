@@ -12,6 +12,10 @@ const JWT_SEC = process.env.JWT_SECRET || "impactog_secret_change_in_prod";
 app.use(cors());
 app.use(express.json());
 
+app.get("/", (_req, res) => {
+  res.json({ status: "ok", app: "Impacto G API" });
+});
+
 // ===== DB =====
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
