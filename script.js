@@ -1,7 +1,7 @@
 // =============================================
 //  SUPABASE CONFIG
 // =============================================
-const API_BASE = "https://impacto-g.onrender.com/api";
+const API_BASE = "/api";
 
 const apiHeaders = (token) => ({
   "Content-Type":  "application/json",
