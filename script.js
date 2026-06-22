@@ -297,14 +297,14 @@ updateSliderGrad("speedSlider",   1,   0.25, 3);
 //  THEME
 // =============================================
 function toggleTheme() {
-  const isLight = document.body.classList.toggle("light");
-  document.getElementById("btnTheme").textContent = isLight ? "☀️" : "🌙";
-  localStorage.setItem("impactog_theme", isLight ? "light" : "dark");
+  const isDark = document.body.classList.toggle("dark");
+  document.getElementById("btnTheme").textContent = isDark ? "🌙" : "☀️";
+  localStorage.setItem("impactog_theme", isDark ? "dark" : "light");
 }
 (function applyTheme() {
-  if (localStorage.getItem("impactog_theme") === "light") {
-    document.body.classList.add("light");
-    document.getElementById("btnTheme").textContent = "☀️";
+  if (localStorage.getItem("impactog_theme") === "dark") {
+    document.body.classList.add("dark");
+    document.getElementById("btnTheme").textContent = "🌙";
   }
 })();
 
@@ -401,7 +401,7 @@ const btnPause    = document.getElementById("btnPause");
 const pauseOverlay = document.getElementById("pauseOverlay");
 const toast       = document.getElementById("toast");
 
-grafCvs.width = 600; grafCvs.height = 220;
+grafCvs.width = 720; grafCvs.height = 240;
 
 // =============================================
 //  TRAIL
@@ -434,18 +434,23 @@ let grafA = [], grafB = [];
 
 function dibujarGrafica(tMax, vMax) {
   const W = grafCvs.width, H = grafCvs.height;
-  const pad = { t: 12, r: 12, b: 30, l: 48 };
+  const pad = { t: 14, r: 14, b: 34, l: 52 };
   const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
 
+  const isDark = document.body.classList.contains("dark");
+  const bgCol = isDark ? "#060d1a" : "#eef4fa";
+  const gridCol = isDark ? "#1a3050" : "#c8d8e8";
+  const textCol = isDark ? "#4a6080" : "#4a7a9a";
+
   grafCtx.clearRect(0, 0, W, H);
-  grafCtx.fillStyle = "#060d1a"; grafCtx.fillRect(0, 0, W, H);
+  grafCtx.fillStyle = bgCol; grafCtx.fillRect(0, 0, W, H);
 
   // Grid
-  grafCtx.strokeStyle = "#1a3050"; grafCtx.lineWidth = 1;
+  grafCtx.strokeStyle = gridCol; grafCtx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = pad.t + (i / 4) * h;
     grafCtx.beginPath(); grafCtx.moveTo(pad.l, y); grafCtx.lineTo(pad.l + w, y); grafCtx.stroke();
-    grafCtx.fillStyle = "#4a6080"; grafCtx.font = "10px 'Share Tech Mono',monospace"; grafCtx.textAlign = "right";
+    grafCtx.fillStyle = textCol; grafCtx.font = "11px 'JetBrains Mono',monospace"; grafCtx.textAlign = "right";
     grafCtx.fillText((vMax * (1 - i / 4)).toFixed(0), pad.l - 5, y + 4);
     const x = pad.l + (i / 4) * w;
     grafCtx.beginPath(); grafCtx.moveTo(x, pad.t); grafCtx.lineTo(x, pad.t + h); grafCtx.stroke();
@@ -453,13 +458,13 @@ function dibujarGrafica(tMax, vMax) {
     grafCtx.fillText((tMax * i / 4).toFixed(1), x, pad.t + h + 18);
   }
 
-  grafCtx.fillStyle = "#4a6080"; grafCtx.font = "10px 'Inter',sans-serif"; grafCtx.textAlign = "center";
+  grafCtx.fillStyle = textCol; grafCtx.font = "11px 'Inter',sans-serif"; grafCtx.textAlign = "center";
   grafCtx.fillText("Tiempo (s)", pad.l + w / 2, H - 3);
   grafCtx.save(); grafCtx.translate(12, pad.t + h / 2); grafCtx.rotate(-Math.PI / 2);
   grafCtx.fillText("v (m/s)", 0, 0); grafCtx.restore();
 
-  drawGrafLine(grafA, "#22c55e", pad, w, h, tMax, vMax);
-  if (cfg.bEnabled) drawGrafLine(grafB, "#f59e0b", pad, w, h, tMax, vMax);
+  drawGrafLine(grafA, "#0891b2", pad, w, h, tMax, vMax);
+  if (cfg.bEnabled) drawGrafLine(grafB, "#d97706", pad, w, h, tMax, vMax);
 }
 
 function drawGrafLine(pts, color, pad, w, h, tMax, vMax) {
@@ -476,7 +481,11 @@ function drawGrafLine(pts, color, pad, w, h, tMax, vMax) {
   grafCtx.fillStyle = color; grafCtx.fill();
 }
 
-function limpiarGrafica() { grafCtx.fillStyle = "#060d1a"; grafCtx.fillRect(0, 0, grafCvs.width, grafCvs.height); }
+function limpiarGrafica() {
+  const isDark = document.body.classList.contains("dark");
+  grafCtx.fillStyle = isDark ? "#060d1a" : "#eef4fa";
+  grafCtx.fillRect(0, 0, grafCvs.width, grafCvs.height);
+}
 
 // =============================================
 //  TOAST
@@ -582,13 +591,19 @@ function iniciarSimulacion() {
       document.getElementById("mHB").textContent = simB.h.toFixed(2) + " m";
     }
 
-    // Graph
+    // Graph - dynamic axes to handle air resistance (longer fall times)
     const tSample = simA.t;
     if (grafA.length === 0 || tSample - grafA[grafA.length - 1].t > 0.04)
       grafA.push({ t: simA.t, v: simA.v });
     if (simB && (grafB.length === 0 || simB.t - grafB[grafB.length - 1].t > 0.04))
       grafB.push({ t: simB.t, v: simB.v });
-    dibujarGrafica(tAxis, vAxis);
+    const lastTA = grafA.length ? grafA[grafA.length - 1].t : 0;
+    const lastTB = grafB?.length ? grafB[grafB.length - 1].t : 0;
+    const lastVA = grafA.length ? grafA[grafA.length - 1].v : 0;
+    const lastVB = grafB?.length ? grafB[grafB.length - 1].v : 0;
+    const _tMax = Math.max(tAxis, lastTA * 1.12, lastTB * 1.12);
+    const _vMax = Math.max(vAxis, lastVA * 1.15, lastVB * 1.15);
+    dibujarGrafica(_tMax, _vMax);
     document.getElementById("grafHint").textContent = `A: ${simA.v.toFixed(1)} m/s` + (simB ? `  B: ${simB.v.toFixed(1)} m/s` : "");
 
     const allDone = simA.done && (!simB || simB.done);
