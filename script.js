@@ -222,11 +222,22 @@ function confirmarNombre() {
 function cerrarModal() { document.getElementById("modalOverlay").classList.add("hidden"); }
 
 // =============================================
+//  TIPOS DE OBJETO
+// =============================================
+const TIPOS_OBJETO = {
+  bola:    { nombre: "Bola",    emoji: "⚽", masa: 1    },
+  pluma:   { nombre: "Pluma",   emoji: "🪶", masa: 0.1  },
+  hoja:    { nombre: "Hoja",    emoji: "🍃", masa: 0.3  },
+  roca:    { nombre: "Roca",    emoji: "🪨", masa: 5    },
+  persona: { nombre: "Persona", emoji: "🧑", masa: 70   },
+};
+
+// =============================================
 //  CONFIG STATE
 // =============================================
 const cfg = {
-  A: { g: 9.8,  nombre: "Tierra", h0: 100 },
-  B: { g: 3.72, nombre: "Marte",  h0: 100 },
+  A: { g: 9.8,  nombre: "Tierra", h0: 100, tipo: "bola" },
+  B: { g: 3.72, nombre: "Marte",  h0: 100, tipo: "bola" },
   k:     0,       // coef. resistencia aire
   speed: 1,       // multiplicador velocidad
   bEnabled: true
@@ -269,6 +280,31 @@ function syncSpeed(val) {
 function updateSliderGrad(id, val, min, max) {
   const pct = ((val - min) / (max - min)) * 100;
   document.getElementById(id).style.setProperty("--pct", pct + "%");
+}
+
+function selectTipo(obj, btn) {
+  const grid = document.getElementById("tipoGrid" + obj);
+  grid.querySelectorAll(".tipo-btn").forEach(b => b.classList.remove("active", "active-a", "active-b"));
+  btn.classList.add(obj === "A" ? "active-a" : "active-b");
+  cfg[obj].tipo = btn.dataset.tipo;
+  actualizarBolaVisual(obj);
+}
+
+function actualizarBolaVisual(obj) {
+  const tipo = TIPOS_OBJETO[cfg[obj].tipo];
+  const bola = document.getElementById("bola" + obj);
+  if (!bola) return;
+  if (cfg[obj].tipo === "bola") {
+    bola.textContent = "";
+    bola.style.background = "";
+    bola.style.boxShadow = "";
+    bola.style.fontSize = "";
+  } else {
+    bola.textContent = tipo.emoji;
+    bola.style.background = "rgba(0,0,0,0.12)";
+    bola.style.boxShadow = "0 0 10px rgba(255,255,255,0.15)";
+    bola.style.fontSize = "14px";
+  }
 }
 
 function toggleB() {
@@ -368,15 +404,15 @@ let isRunning   = false;
 let simFrame    = null;
 
 // Per-object sim state
-function makeSim(h0, g, k) {
-  return { h0, g, k, t: 0, v: 0, h: h0, done: false };
+function makeSim(h0, g, k, masa = 1) {
+  return { h0, g, k, masa, t: 0, v: 0, h: h0, done: false };
 }
 
 // Euler integration step (handles air resistance)
-// a = g - (k/m)*v^2  (m=1 kg reference)
+// a = g - (k/m)*v²
 function stepEuler(sim, dt) {
   if (sim.done) return;
-  const a  = sim.g - sim.k * sim.v * sim.v;
+  const a  = sim.g - (sim.k * sim.v * sim.v) / sim.masa;
   sim.v   += a * dt;
   sim.h   -= sim.v * dt;
   sim.t   += dt;
@@ -488,6 +524,39 @@ function limpiarGrafica() {
 }
 
 // =============================================
+//  IMPACT PARTICLES (on trail canvas)
+// =============================================
+function dibujarImpacto(x, y, colorA = "#00d4ff", colorB = "#f59e0b") {
+  const cvs = trailCvs, ctx = trailCtx;
+  const particles = [];
+  for (let i = 0; i < 20; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 2;
+    particles.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 4,
+      r: Math.random() * 3 + 1, life: 1,
+      color: Math.random() > 0.5 ? colorA : colorB
+    });
+  }
+  function animar() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    drawTrails();
+    let alive = false;
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= 0.03;
+      if (p.life <= 0) return;
+      alive = true;
+      ctx.globalAlpha = p.life;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color; ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    if (alive) requestAnimationFrame(animar);
+  }
+  animar();
+}
+
+// =============================================
 //  TOAST
 // =============================================
 let toastTimer = null;
@@ -530,8 +599,10 @@ function iniciarSimulacion() {
   btnSim.disabled = true; btnPause.disabled = false;
   isRunning = true; resizeTrail();
 
-  const simA = makeSim(h0A, cfg.A.g, cfg.k);
-  const simB = cfg.bEnabled ? makeSim(h0B, cfg.B.g, cfg.k) : null;
+  const masaA = TIPOS_OBJETO[cfg.A.tipo].masa;
+  const masaB = TIPOS_OBJETO[cfg.B.tipo].masa;
+  const simA = makeSim(h0A, cfg.A.g, cfg.k, masaA);
+  const simB = cfg.bEnabled ? makeSim(h0B, cfg.B.g, cfg.k, masaB) : null;
 
   // Estimate max time & velocity for graph axes (vacuum approximation for scale)
   const tMaxA = Math.sqrt(2 * h0A / cfg.A.g);
@@ -615,6 +686,8 @@ function iniciarSimulacion() {
       isRunning = false; btnPause.disabled = true;
       suelo.classList.add("impact"); setTimeout(() => suelo.classList.remove("impact"), 700);
       playImpact();
+      dibujarImpacto(cxA, escH + 11, "#00d4ff", "#7df9ff");
+      if (simB) dibujarImpacto(cxB, escH + 11, "#f59e0b", "#fde68a");
       const msgA = `A: ${fmtTime(simA.t)} · ${simA.v.toFixed(2)}m/s`;
       const msgB = simB ? `  |  B: ${fmtTime(simB.t)} · ${simB.v.toFixed(2)}m/s` : "";
       showToast("✅ " + msgA + msgB);
@@ -953,7 +1026,7 @@ function getNextLevel(pts) {
 // =============================================
 //  CHALLENGE STATE
 // =============================================
-let challengeCfg = { g: 9.8, nombre: "Tierra", h0: 100, k: 0, speed: 1 };
+let challengeCfg = { g: 9.8, nombre: "Tierra", h0: 100, k: 0, speed: 1, tipo: "bola" };
 let currentMissionIdx = 0;
 let challengeAnimId = null;
 let challengeRunning = false;
@@ -969,6 +1042,40 @@ const bolaWrapC    = document.getElementById("bolaWrapC");
 const bolaShadowC  = document.getElementById("bolaShadowC");
 const pauseOverlayC = document.getElementById("pauseOverlayC");
 
+function dibujarImpactoC(x, y) {
+  const cvs = trailCvsC, ctx = trailCtxC;
+  const particles = [];
+  for (let i = 0; i < 20; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 2;
+    particles.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 4,
+      r: Math.random() * 3 + 1, life: 1,
+      color: Math.random() > 0.5 ? "#00d4ff" : "#22c55e"
+    });
+  }
+  function animar() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    for (let i = 1; i < trailC.length; i++) {
+      const a = (i / trailC.length) * 0.5, r = 3 * (i / trailC.length);
+      ctx.beginPath(); ctx.arc(trailC[i].x, trailC[i].y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(34,197,94,${a})`; ctx.fill();
+    }
+    let alive = false;
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= 0.03;
+      if (p.life <= 0) return;
+      alive = true;
+      ctx.globalAlpha = p.life;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color; ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    if (alive) requestAnimationFrame(animar);
+  }
+  animar();
+}
+
 function resizeTrailC() {
   if (!trailCvsC || !escenarioC) return;
   trailCvsC.width  = escenarioC.clientWidth;
@@ -980,6 +1087,30 @@ function selectPlanetC(btn) {
   btn.classList.add("active-a");
   challengeCfg.g      = parseFloat(btn.dataset.g);
   challengeCfg.nombre = btn.dataset.name;
+}
+
+function selectTipoC(btn) {
+  document.querySelectorAll("#tipoGridC .tipo-btn").forEach(b => b.classList.remove("active-a","active-b","active"));
+  btn.classList.add("active-a");
+  challengeCfg.tipo = btn.dataset.tipo;
+  actualizarBolaVisualC();
+}
+
+function actualizarBolaVisualC() {
+  const tipo = TIPOS_OBJETO[challengeCfg.tipo];
+  const bola = document.getElementById("bolaC");
+  if (!bola) return;
+  if (challengeCfg.tipo === "bola") {
+    bola.textContent = "";
+    bola.style.background = "";
+    bola.style.boxShadow = "";
+    bola.style.fontSize = "";
+  } else {
+    bola.textContent = tipo.emoji;
+    bola.style.background = "rgba(0,0,0,0.12)";
+    bola.style.boxShadow = "0 0 10px rgba(255,255,255,0.15)";
+    bola.style.fontSize = "14px";
+  }
 }
 
 function syncAlturaC(val) {
@@ -1043,7 +1174,8 @@ function iniciarDesafio() {
   document.getElementById("btnSimC").disabled = true;
   challengeRunning = true; resizeTrailC();
 
-  const sim = makeSim(h0, challengeCfg.g, challengeCfg.k);
+  const masaC = TIPOS_OBJETO[challengeCfg.tipo].masa;
+  const sim = makeSim(h0, challengeCfg.g, challengeCfg.k, masaC);
   const tTotal = Math.sqrt(2 * h0 / challengeCfg.g);
   const escH   = escenarioC.clientHeight - 22 - 8;
   const cx     = trailCvsC.width / 2;
@@ -1079,6 +1211,7 @@ function iniciarDesafio() {
       challengeRunning = false;
       sueloC.classList.add("impact"); setTimeout(() => sueloC.classList.remove("impact"), 700);
       playImpact();
+      dibujarImpactoC(cx, escH + 11);
       evaluarMision(sim.t, sim.v);
       document.getElementById("btnSimC").disabled = false;
     }
@@ -1324,3 +1457,8 @@ updateSliderGrad("alturaSliderC", 100, 10, 1000);
 updateSliderGrad("airSliderC",    0,   0,  0.5);
 updateSliderGrad("speedSliderC",  1,   0.25, 3);
 cargarMision(0);
+
+// Init object visuals
+actualizarBolaVisual("A");
+actualizarBolaVisual("B");
+actualizarBolaVisualC();
