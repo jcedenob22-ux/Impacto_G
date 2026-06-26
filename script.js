@@ -796,7 +796,7 @@ async function renderHistorial() {
         <td>${e.k_aire}</td>
         <td>${e.tiempo}</td>
         <td>${e.v_final} m/s</td>
-        <td>${new Date(e.fecha).toLocaleString("es", { dateStyle:"short", timeStyle:"short" })}</td>
+        <td>${new Date(e.created_at).toLocaleString("es", { dateStyle:"short", timeStyle:"short" })}</td>
       </tr>`).join("");
   } catch (e) {
     console.error("Supabase select error:", e);
@@ -873,7 +873,7 @@ async function exportarPDF() {
     String(e.id), e.usuario, e.objeto, e.planeta,
     String(e.altura), String(e.k_aire), e.tiempo,
     String(e.v_final),
-    new Date(e.fecha).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })
+    new Date(e.created_at).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })
   ]);
 
   const colW = [10, 28, 16, 22, 22, 16, 22, 28, 36];
@@ -942,7 +942,7 @@ async function exportarCSV() {
   const rows = hist.map(e => [
     e.id, e.usuario, e.objeto, e.planeta, e.altura, e.k_aire,
     e.tiempo, e.v_final,
-    new Date(e.fecha).toLocaleString("es", { dateStyle:"short", timeStyle:"short" })
+    new Date(e.created_at).toLocaleString("es", { dateStyle:"short", timeStyle:"short" })
   ]);
 
   const csv = [headers, ...rows]
