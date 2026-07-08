@@ -777,7 +777,14 @@ async function guardarSimulacion(obj, planeta, h0, k, tiempo, vFinal) {
   }
 }
 
-async function renderHistorial() {
+async function obtenerFecha(e) {
+  const val = e.created_at || e.fecha;
+  if (!val) return "—";
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? "—" : d.toLocaleString("es", { dateStyle:"short", timeStyle:"short" });
+}
+
+function renderHistorial() {
   const tbody = document.getElementById("historialBody");
   tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Cargando...</td></tr>`;
   try {
@@ -796,7 +803,7 @@ async function renderHistorial() {
         <td>${e.k_aire}</td>
         <td>${e.tiempo}</td>
         <td>${e.v_final} m/s</td>
-        <td>${new Date(e.created_at).toLocaleString("es", { dateStyle:"short", timeStyle:"short" })}</td>
+        <td>${obtenerFecha(e)}</td>
       </tr>`).join("");
   } catch (e) {
     console.error("Supabase select error:", e);
@@ -873,7 +880,7 @@ async function exportarPDF() {
     String(e.id), e.usuario, e.objeto, e.planeta,
     String(e.altura), String(e.k_aire), e.tiempo,
     String(e.v_final),
-    new Date(e.created_at).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })
+    obtenerFecha(e)
   ]);
 
   const colW = [10, 28, 16, 22, 22, 16, 22, 28, 36];
@@ -942,7 +949,7 @@ async function exportarCSV() {
   const rows = hist.map(e => [
     e.id, e.usuario, e.objeto, e.planeta, e.altura, e.k_aire,
     e.tiempo, e.v_final,
-    new Date(e.created_at).toLocaleString("es", { dateStyle:"short", timeStyle:"short" })
+    obtenerFecha(e)
   ]);
 
   const csv = [headers, ...rows]
