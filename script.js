@@ -777,14 +777,14 @@ async function guardarSimulacion(obj, planeta, h0, k, tiempo, vFinal) {
   }
 }
 
-async function obtenerFecha(e) {
+function obtenerFecha(e) {
   const val = e.created_at || e.fecha;
   if (!val) return "—";
   const d = new Date(val);
   return isNaN(d.getTime()) ? "—" : d.toLocaleString("es", { dateStyle:"short", timeStyle:"short" });
 }
 
-function renderHistorial() {
+async function renderHistorial() {
   const tbody = document.getElementById("historialBody");
   tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Cargando...</td></tr>`;
   try {
